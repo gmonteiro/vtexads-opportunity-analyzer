@@ -1,0 +1,15 @@
+[project]
+name = "vtexads-opportunity-analyzer"
+version = "0.1.0"
+description = "VTEX Ads opportunity analyzer — placement gaps, publisher gaps, and opportunity sizing"
+requires-python = ">=3.10"
+dependencies = [
+    "requests>=2.28",
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+rich = ["rich>=13.0"]
+
+[project.scripts]
+vtexads-analyzer = "analyzer.cli:main"
