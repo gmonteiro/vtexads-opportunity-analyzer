@@ -3,12 +3,14 @@
     { "src": "api/index.py", "use": "@vercel/python" },
     { "src": "api/publishers.py", "use": "@vercel/python" },
     { "src": "api/publisher_detail.py", "use": "@vercel/python" },
-    { "src": "api/campaigns.py", "use": "@vercel/python" }
+    { "src": "api/campaigns.py", "use": "@vercel/python" },
+    { "src": "api/campaign_detail.py", "use": "@vercel/python" }
   ],
   "routes": [
     { "src": "/api/publishers", "dest": "api/publishers.py" },
     { "src": "/api/publisher-detail", "dest": "api/publisher_detail.py" },
     { "src": "/api/campaigns", "dest": "api/campaigns.py" },
+    { "src": "/api/campaign-detail", "dest": "api/campaign_detail.py" },
     { "src": "/(.*)", "dest": "api/index.py" }
   ]
 }

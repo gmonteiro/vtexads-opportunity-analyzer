@@ -149,7 +149,11 @@ function route() {
     const params = new URLSearchParams(location.search);
     const pubId = params.get('publisher');
     const tab = params.get('tab');
-    if (tab === 'campaigns') {
+    const campId = params.get('campaign');
+    if (tab === 'campaigns' && campId) {
+        setActiveTab('campaigns');
+        renderCampaignDetail(campId);
+    } else if (tab === 'campaigns') {
         setActiveTab('campaigns');
         renderCampaigns();
     } else if (pubId) {
@@ -332,7 +336,7 @@ async function renderCampaigns() {
                     </tr></thead><tbody>`;
 
             for (const c of camps) {
-                html += `<tr data-name="${esc(c.campaign.toLowerCase())}">
+                html += `<tr class="clickable" data-campid="${esc(c.campaign_id)}" data-name="${esc(c.campaign.toLowerCase())}">
                     <td class="wrap">${esc(c.campaign)}</td>
                     <td><span class="badge ${adTypeBadge(c.ad_type)}">${esc(c.ad_type)}</span></td>
                     <td class="num">${c.daily_budget ? fmtBRL(c.daily_budget) : '-'}</td>
@@ -342,6 +346,15 @@ async function renderCampaigns() {
         }
 
         app.innerHTML = html;
+
+        // Campaign click delegation
+        app.addEventListener('click', e => {
+            const tr = e.target.closest('tr.clickable[data-campid]');
+            if (tr) {
+                history.pushState(null, '', '/?tab=campaigns&campaign=' + encodeURIComponent(tr.dataset.campid));
+                renderCampaignDetail(tr.dataset.campid);
+            }
+        });
     } catch (e) { app.innerHTML = '<div class="error">' + esc(e.message) + '</div>'; }
 }
 
@@ -363,6 +376,87 @@ function filterCampaigns() {
             sec.querySelector('.ad-type-body').classList.remove('hidden');
         }
     });
+}
+
+// ==================== CAMPAIGN DETAIL ====================
+function goBackCampaigns() {
+    history.pushState(null, '', '/?tab=campaigns');
+    renderCampaigns();
+}
+
+async function renderCampaignDetail(campId) {
+    app.innerHTML = '<div class="loading">Analisando placements da campanha... (pode levar alguns segundos)</div>';
+    try {
+        const resp = await fetch('/api/campaign-detail?id=' + encodeURIComponent(campId));
+        if (!resp.ok) throw new Error('Erro ao carregar campanha');
+        const data = await resp.json();
+        if (data.error) throw new Error(data.error);
+
+        const usedCount = data.used_placements.length;
+        const gapCount = data.gap_placements.length;
+
+        let html = `<div class="detail-header"><button class="back-btn" onclick="goBackCampaigns()">&#8592; Voltar</button><div>
+            <h2>${esc(data.name)}</h2>
+            <div class="detail-meta">
+                <span>${esc(data.advertiser)}</span>
+                <span class="badge ${adTypeBadge(data.ad_type)}">${esc(data.ad_type)}</span>
+                <span>${statusBadge(data.status, data.is_active)}</span>
+                ${data.daily_budget ? '<span>Budget: ' + fmtBRL(data.daily_budget) + '/dia</span>' : ''}
+            </div></div></div>`;
+
+        html += `<div class="stats">
+            <div class="stat"><strong>${usedCount}</strong> placements ativos</div>
+            <div class="stat" style="color:var(--yellow)"><strong>${gapCount}</strong> placements disponiveis nao utilizados</div>
+        </div>`;
+
+        // Used placements grouped by context
+        if (usedCount > 0) {
+            const usedByCtx = {};
+            for (const p of data.used_placements) {
+                if (!usedByCtx[p.context]) usedByCtx[p.context] = [];
+                usedByCtx[p.context].push(p);
+            }
+            html += `<div class="ad-type-section"><div class="ad-type-header" style="border-color:var(--green)" onclick="toggleSection(this)">
+                <h3 style="color:var(--green)">Placements Ativos</h3>
+                <div><span class="count">${usedCount} placements</span><span class="arrow"> &#9660;</span></div>
+            </div><div class="ad-type-body">`;
+            for (const ctx of Object.keys(usedByCtx).sort()) {
+                html += `<div class="context-label">${esc(ctx)}</div>`;
+                html += `<table><thead><tr><th>Placement</th><th style="text-align:right">Impressoes (30d)</th></tr></thead><tbody>`;
+                for (const p of usedByCtx[ctx]) {
+                    html += `<tr><td>${esc(p.placement_name)}</td><td class="num">${fmt(p.impressions)}</td></tr>`;
+                }
+                html += '</tbody></table>';
+            }
+            html += '</div></div>';
+        }
+
+        // Gap placements grouped by context
+        if (gapCount > 0) {
+            const gapByCtx = {};
+            for (const p of data.gap_placements) {
+                if (!gapByCtx[p.context]) gapByCtx[p.context] = [];
+                gapByCtx[p.context].push(p);
+            }
+            html += `<div class="ad-type-section"><div class="ad-type-header" style="border-color:var(--yellow)" onclick="toggleSection(this)">
+                <h3 style="color:var(--yellow)">Placements Disponiveis (Gap)</h3>
+                <div><span class="count">${gapCount} oportunidades</span><span class="arrow"> &#9660;</span></div>
+            </div><div class="ad-type-body">`;
+            for (const ctx of Object.keys(gapByCtx).sort()) {
+                html += `<div class="context-label">${esc(ctx)}</div>`;
+                html += `<table><thead><tr><th>Placement</th><th style="text-align:right">Requests na rede (30d)</th><th style="text-align:right">Impressoes na rede (30d)</th></tr></thead><tbody>`;
+                for (const p of gapByCtx[ctx]) {
+                    html += `<tr><td>${esc(p.placement_name)}</td><td class="num">${fmt(p.total_requests)}</td><td class="num">${fmt(p.total_impressions)}</td></tr>`;
+                }
+                html += '</tbody></table>';
+            }
+            html += '</div></div>';
+        }
+
+        app.innerHTML = html;
+    } catch (e) {
+        app.innerHTML = `<div class="detail-header"><button class="back-btn" onclick="goBackCampaigns()">&#8592; Voltar</button></div><div class="error">${esc(e.message)}</div>`;
+    }
 }
 
 function statusBadge(status, isActive) {
