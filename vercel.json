@@ -6,7 +6,8 @@
     { "src": "api/campaigns.py", "use": "@vercel/python" },
     { "src": "api/campaign_detail.py", "use": "@vercel/python" },
     { "src": "api/coverage.py", "use": "@vercel/python" },
-    { "src": "api/placements.py", "use": "@vercel/python" }
+    { "src": "api/placements.py", "use": "@vercel/python" },
+    { "src": "api/placements_page.py", "use": "@vercel/python" }
   ],
   "routes": [
     { "src": "/api/publishers", "dest": "api/publishers.py" },
@@ -15,6 +16,7 @@
     { "src": "/api/campaign-detail", "dest": "api/campaign_detail.py" },
     { "src": "/api/coverage", "dest": "api/coverage.py" },
     { "src": "/api/placements", "dest": "api/placements.py" },
+    { "src": "/placements", "dest": "api/placements_page.py" },
     { "src": "/(.*)", "dest": "api/index.py" }
   ]
 }
