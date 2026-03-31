@@ -90,6 +90,24 @@ td.wrap { white-space: normal; max-width: 350px; }
 .ad-type-body.hidden { display: none; }
 .context-label { padding: 0.4rem 1rem; background: rgba(124,58,237,0.08); color: var(--accent); font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
 
+/* Coverage bar */
+.cov-bar { display: flex; align-items: center; gap: 0.5rem; }
+.cov-bar-track { width: 80px; height: 8px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
+.cov-bar-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
+.cov-bar-fill.high { background: var(--green); }
+.cov-bar-fill.med { background: var(--yellow); }
+.cov-bar-fill.low { background: var(--red); }
+.cov-pct { font-size: 0.8rem; font-weight: 600; min-width: 40px; }
+.cov-pct.high { color: var(--green); }
+.cov-pct.med { color: var(--yellow); }
+.cov-pct.low { color: var(--red); }
+
+/* Filters row */
+.filters { display: flex; gap: 0.8rem; margin-bottom: 1rem; flex-wrap: wrap; align-items: center; }
+.filters select { padding: 0.5rem 0.8rem; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); font-size: 0.85rem; }
+.filters input { flex: 1; min-width: 200px; padding: 0.6rem 0.8rem; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); font-size: 0.9rem; outline: none; }
+.filters input:focus { border-color: var(--accent); }
+
 /* Loading / Error */
 .loading { text-align: center; padding: 3rem; color: var(--text2); }
 .error { text-align: center; padding: 2rem; color: var(--red); }
@@ -108,8 +126,9 @@ td.wrap { white-space: normal; max-width: 350px; }
         <p class="subtitle">Publishers, formatos, placements e campanhas</p>
     </header>
     <div class="tabs" id="tabs">
-        <div class="tab active" data-tab="publishers">Publishers</div>
-        <div class="tab" data-tab="campaigns">Campanhas Network</div>
+        <div class="tab" data-tab="publishers">Publishers</div>
+        <div class="tab active" data-tab="coverage">Cobertura</div>
+        <div class="tab" data-tab="campaigns">Campanhas</div>
     </div>
     <div id="app"></div>
 </div>
@@ -136,8 +155,11 @@ $('#tabs').addEventListener('click', e => {
     tab.classList.add('active');
     currentTab = tab.dataset.tab;
     if (currentTab === 'publishers') {
-        history.pushState(null, '', '/');
+        history.pushState(null, '', '/?tab=publishers');
         route();
+    } else if (currentTab === 'coverage') {
+        history.pushState(null, '', '/');
+        renderCoverage();
     } else if (currentTab === 'campaigns') {
         history.pushState(null, '', '/?tab=campaigns');
         renderCampaigns();
@@ -156,12 +178,18 @@ function route() {
     } else if (tab === 'campaigns') {
         setActiveTab('campaigns');
         renderCampaigns();
-    } else if (pubId) {
+    } else if (tab === 'publishers' && pubId) {
         setActiveTab('publishers');
         renderDetail(pubId);
-    } else {
+    } else if (tab === 'publishers') {
         setActiveTab('publishers');
         renderList();
+    } else if (campId) {
+        setActiveTab('coverage');
+        renderCampaignDetail(campId);
+    } else {
+        setActiveTab('coverage');
+        renderCoverage();
     }
 }
 
@@ -227,12 +255,12 @@ function filterRows(inputId, tbodyId) {
 }
 
 function navigate(pubId) {
-    history.pushState(null, '', '/?publisher=' + encodeURIComponent(pubId));
+    history.pushState(null, '', '/?tab=publishers&publisher=' + encodeURIComponent(pubId));
     renderDetail(pubId);
 }
 
 function goBack() {
-    history.pushState(null, '', '/');
+    history.pushState(null, '', '/?tab=publishers');
     renderList();
 }
 
@@ -288,6 +316,112 @@ async function renderDetail(pubId) {
 function toggleSection(el) {
     el.classList.toggle('collapsed');
     el.nextElementSibling.classList.toggle('hidden');
+}
+
+// ==================== COVERAGE TAB ====================
+let coverageData = [];
+let coverageSort = { col: 'ad_count', asc: false };
+
+async function renderCoverage() {
+    app.innerHTML = '<div class="loading">Calculando cobertura de placements... (pode levar alguns segundos)</div>';
+    try {
+        const resp = await fetch('/api/coverage');
+        if (!resp.ok) throw new Error('Erro ao carregar cobertura');
+        const data = await resp.json();
+        if (data.error) throw new Error(data.error);
+        coverageData = data;
+        renderCoverageTable();
+    } catch (e) { app.innerHTML = '<div class="error">' + esc(e.message) + '</div>'; }
+}
+
+function renderCoverageTable() {
+    let data = [...coverageData];
+
+    // Filters
+    const q = ($('#cov-search') || {}).value || '';
+    const typeFilter = ($('#cov-type') || {}).value || 'all';
+
+    if (q) {
+        const ql = q.toLowerCase();
+        data = data.filter(c => c.advertiser.toLowerCase().includes(ql) || c.name.toLowerCase().includes(ql));
+    }
+    if (typeFilter !== 'all') {
+        data = data.filter(c => c.ad_type === typeFilter);
+    }
+
+    // Sort
+    data.sort((a, b) => {
+        let va = a[coverageSort.col], vb = b[coverageSort.col];
+        if (typeof va === 'string') { va = va.toLowerCase(); vb = (vb||'').toLowerCase(); }
+        if (va < vb) return coverageSort.asc ? -1 : 1;
+        if (va > vb) return coverageSort.asc ? 1 : -1;
+        return 0;
+    });
+
+    const types = [...new Set(coverageData.map(c => c.ad_type))].sort();
+    const totalGaps = data.filter(c => c.coverage_pct < 80).length;
+    const avgCov = data.length ? Math.round(data.reduce((s, c) => s + c.coverage_pct, 0) / data.length) : 0;
+
+    let html = `
+        <div class="filters">
+            <input type="text" id="cov-search" placeholder="Buscar advertiser ou campanha..." value="${esc(q)}" oninput="renderCoverageTable()" />
+            <select id="cov-type" onchange="renderCoverageTable()">
+                <option value="all">Todos os tipos</option>
+                ${types.map(t => '<option value="' + esc(t) + '"' + (t === typeFilter ? ' selected' : '') + '>' + esc(t) + '</option>').join('')}
+            </select>
+        </div>
+        <div class="stats">
+            <div class="stat"><strong>${data.length}</strong> campanhas ativas</div>
+            <div class="stat"><strong>${avgCov}%</strong> cobertura media</div>
+            <div class="stat" style="color:var(--yellow)"><strong>${totalGaps}</strong> com oportunidade (&lt;80%)</div>
+        </div>
+        <div class="table-wrap"><table><thead><tr>
+            <th onclick="sortCoverage('advertiser')">Advertiser ${sortIcon('advertiser')}</th>
+            <th onclick="sortCoverage('name')">Campanha ${sortIcon('name')}</th>
+            <th onclick="sortCoverage('ad_type')">Tipo ${sortIcon('ad_type')}</th>
+            <th style="text-align:right" onclick="sortCoverage('ad_count')">Ads ${sortIcon('ad_count')}</th>
+            <th style="text-align:right" onclick="sortCoverage('used_placements')">Usados ${sortIcon('used_placements')}</th>
+            <th style="text-align:right" onclick="sortCoverage('available_placements')">Disponiveis ${sortIcon('available_placements')}</th>
+            <th onclick="sortCoverage('coverage_pct')">Cobertura ${sortIcon('coverage_pct')}</th>
+        </tr></thead><tbody>`;
+
+    for (const c of data) {
+        const level = c.coverage_pct >= 80 ? 'high' : c.coverage_pct >= 50 ? 'med' : 'low';
+        html += `<tr class="clickable" data-campid="${esc(c.campaign_id)}">
+            <td class="name">${esc(c.advertiser)}</td>
+            <td class="wrap">${esc(c.name)}</td>
+            <td><span class="badge ${adTypeBadge(c.ad_type)}">${esc(c.ad_type)}</span></td>
+            <td class="num">${c.ad_count}</td>
+            <td class="num">${c.used_placements}</td>
+            <td class="num">${c.available_placements}</td>
+            <td><div class="cov-bar">
+                <div class="cov-bar-track"><div class="cov-bar-fill ${level}" style="width:${Math.min(c.coverage_pct, 100)}%"></div></div>
+                <span class="cov-pct ${level}">${c.coverage_pct}%</span>
+            </div></td></tr>`;
+    }
+
+    html += '</tbody></table></div>';
+    app.innerHTML = html;
+
+    // Click delegation for campaign drill-down
+    app.querySelector('tbody').addEventListener('click', e => {
+        const tr = e.target.closest('tr.clickable');
+        if (tr && tr.dataset.campid) {
+            history.pushState(null, '', '/?campaign=' + encodeURIComponent(tr.dataset.campid));
+            renderCampaignDetail(tr.dataset.campid);
+        }
+    });
+}
+
+function sortCoverage(col) {
+    if (coverageSort.col === col) coverageSort.asc = !coverageSort.asc;
+    else { coverageSort.col = col; coverageSort.asc = col === 'advertiser' || col === 'name'; }
+    renderCoverageTable();
+}
+
+function sortIcon(col) {
+    if (coverageSort.col !== col) return '';
+    return coverageSort.asc ? ' &#9650;' : ' &#9660;';
 }
 
 // ==================== CAMPAIGNS TAB ====================
@@ -380,8 +514,15 @@ function filterCampaigns() {
 
 // ==================== CAMPAIGN DETAIL ====================
 function goBackCampaigns() {
-    history.pushState(null, '', '/?tab=campaigns');
-    renderCampaigns();
+    // Go back to coverage if that's where we came from
+    const prev = new URLSearchParams(location.search).get('tab');
+    if (prev === 'campaigns') {
+        history.pushState(null, '', '/?tab=campaigns');
+        renderCampaigns();
+    } else {
+        history.pushState(null, '', '/');
+        renderCoverage();
+    }
 }
 
 async function renderCampaignDetail(campId) {
