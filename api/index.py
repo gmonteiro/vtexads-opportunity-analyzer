@@ -108,6 +108,11 @@ td.wrap { white-space: normal; max-width: 350px; }
 .filters input { flex: 1; min-width: 200px; padding: 0.6rem 0.8rem; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); font-size: 0.9rem; outline: none; }
 .filters input:focus { border-color: var(--accent); }
 
+/* Quality badges */
+.badge.q-high { background: rgba(34,197,94,0.15); color: var(--green); }
+.badge.q-med { background: rgba(234,179,8,0.15); color: var(--yellow); }
+.badge.q-low { background: rgba(239,68,68,0.15); color: var(--red); }
+
 /* Loading / Error */
 .loading { text-align: center; padding: 3rem; color: var(--text2); }
 .error { text-align: center; padding: 2rem; color: var(--red); }
@@ -127,6 +132,7 @@ td.wrap { white-space: normal; max-width: 350px; }
     </header>
     <div class="tabs" id="tabs">
         <div class="tab" data-tab="publishers">Publishers</div>
+        <div class="tab" data-tab="placements">Placements</div>
         <div class="tab active" data-tab="coverage">Cobertura</div>
         <div class="tab" data-tab="campaigns">Campanhas</div>
     </div>
@@ -157,6 +163,9 @@ $('#tabs').addEventListener('click', e => {
     if (currentTab === 'publishers') {
         history.pushState(null, '', '/?tab=publishers');
         route();
+    } else if (currentTab === 'placements') {
+        history.pushState(null, '', '/?tab=placements');
+        renderPlacements();
     } else if (currentTab === 'coverage') {
         history.pushState(null, '', '/');
         renderCoverage();
@@ -178,6 +187,9 @@ function route() {
     } else if (tab === 'campaigns') {
         setActiveTab('campaigns');
         renderCampaigns();
+    } else if (tab === 'placements') {
+        setActiveTab('placements');
+        renderPlacements();
     } else if (tab === 'publishers' && pubId) {
         setActiveTab('publishers');
         renderDetail(pubId);
@@ -316,6 +328,117 @@ async function renderDetail(pubId) {
 function toggleSection(el) {
     el.classList.toggle('collapsed');
     el.nextElementSibling.classList.toggle('hidden');
+}
+
+// ==================== PLACEMENTS TAB ====================
+let placementsData = [];
+let plSort = { col: 'total_requests', asc: false };
+
+async function renderPlacements() {
+    app.innerHTML = '<div class="loading">Carregando catalogo de placements...</div>';
+    try {
+        const resp = await fetch('/api/placements');
+        if (!resp.ok) throw new Error('Erro ao carregar placements');
+        const data = await resp.json();
+        if (data.error) throw new Error(data.error);
+        placementsData = data;
+        renderPlacementsTable();
+    } catch (e) { app.innerHTML = '<div class="error">' + esc(e.message) + '</div>'; }
+}
+
+function renderPlacementsTable() {
+    let data = [...placementsData];
+
+    const q = ($('#pl-search') || {}).value || '';
+    const pubFilter = ($('#pl-pub') || {}).value || 'all';
+    const typeFilter = ($('#pl-type') || {}).value || 'all';
+    const qualFilter = ($('#pl-qual') || {}).value || 'hide-low';
+
+    if (q) { const ql = q.toLowerCase(); data = data.filter(p => p.placement_name.toLowerCase().includes(ql) || p.publisher_name.toLowerCase().includes(ql)); }
+    if (pubFilter !== 'all') data = data.filter(p => p.publisher_id === pubFilter);
+    if (typeFilter !== 'all') data = data.filter(p => p.ad_type === typeFilter);
+    if (qualFilter === 'hide-low') data = data.filter(p => p.quality !== 'low');
+    else if (qualFilter !== 'all') data = data.filter(p => p.quality === qualFilter);
+
+    data.sort((a, b) => {
+        let va = a[plSort.col], vb = b[plSort.col];
+        if (typeof va === 'string') { va = va.toLowerCase(); vb = (vb||'').toLowerCase(); }
+        if (va < vb) return plSort.asc ? -1 : 1;
+        if (va > vb) return plSort.asc ? 1 : -1;
+        return 0;
+    });
+
+    const pubs = [...new Map(placementsData.map(p => [p.publisher_id, p.publisher_name])).entries()].sort((a,b) => a[1].localeCompare(b[1]));
+    const types = [...new Set(placementsData.map(p => p.ad_type))].sort();
+    const highCount = data.filter(p => p.quality === 'high').length;
+    const medCount = data.filter(p => p.quality === 'medium').length;
+    const avgFill = data.length ? Math.round(data.reduce((s, p) => s + p.fill_rate, 0) / data.length) : 0;
+
+    let html = `
+        <div class="filters">
+            <input type="text" id="pl-search" placeholder="Buscar placement ou publisher..." value="${esc(q)}" oninput="renderPlacementsTable()" />
+            <select id="pl-pub" onchange="renderPlacementsTable()">
+                <option value="all">Todos publishers</option>
+                ${pubs.map(([id, name]) => '<option value="' + esc(id) + '"' + (id === pubFilter ? ' selected' : '') + '>' + esc(name) + '</option>').join('')}
+            </select>
+            <select id="pl-type" onchange="renderPlacementsTable()">
+                <option value="all">Todos tipos</option>
+                ${types.map(t => '<option value="' + esc(t) + '"' + (t === typeFilter ? ' selected' : '') + '>' + esc(t) + '</option>').join('')}
+            </select>
+            <select id="pl-qual" onchange="renderPlacementsTable()">
+                <option value="hide-low"${qualFilter === 'hide-low' ? ' selected' : ''}>Esconder baixa qualidade</option>
+                <option value="all"${qualFilter === 'all' ? ' selected' : ''}>Todos</option>
+                <option value="high"${qualFilter === 'high' ? ' selected' : ''}>Alta qualidade</option>
+                <option value="medium"${qualFilter === 'medium' ? ' selected' : ''}>Media qualidade</option>
+                <option value="low"${qualFilter === 'low' ? ' selected' : ''}>Baixa qualidade</option>
+            </select>
+        </div>
+        <div class="stats">
+            <div class="stat"><strong>${fmt(data.length)}</strong> placements</div>
+            <div class="stat" style="color:var(--green)"><strong>${fmt(highCount)}</strong> alta qualidade</div>
+            <div class="stat" style="color:var(--yellow)"><strong>${fmt(medCount)}</strong> media</div>
+            <div class="stat"><strong>${avgFill}%</strong> fill rate medio</div>
+        </div>
+        <div class="table-wrap"><table><thead><tr>
+            <th onclick="sortPl('publisher_name')">Publisher ${plSortIcon('publisher_name')}</th>
+            <th onclick="sortPl('placement_name')">Placement ${plSortIcon('placement_name')}</th>
+            <th onclick="sortPl('context')">Contexto ${plSortIcon('context')}</th>
+            <th onclick="sortPl('ad_type')">Tipo ${plSortIcon('ad_type')}</th>
+            <th style="text-align:right" onclick="sortPl('total_requests')">Requests ${plSortIcon('total_requests')}</th>
+            <th style="text-align:right" onclick="sortPl('total_impressions')">Impressoes ${plSortIcon('total_impressions')}</th>
+            <th style="text-align:right" onclick="sortPl('total_clicks')">Cliques ${plSortIcon('total_clicks')}</th>
+            <th style="text-align:right" onclick="sortPl('fill_rate')">Fill Rate ${plSortIcon('fill_rate')}</th>
+            <th onclick="sortPl('quality')">Qualidade ${plSortIcon('quality')}</th>
+        </tr></thead><tbody>`;
+
+    for (const p of data) {
+        const qClass = p.quality === 'high' ? 'q-high' : p.quality === 'medium' ? 'q-med' : 'q-low';
+        const qLabel = p.quality === 'high' ? 'Alta' : p.quality === 'medium' ? 'Media' : 'Baixa';
+        html += `<tr>
+            <td class="name">${esc(p.publisher_name)}</td>
+            <td>${esc(p.placement_name)}</td>
+            <td>${esc(p.context)}</td>
+            <td><span class="badge ${adTypeBadge(p.ad_type)}">${esc(p.ad_type)}</span></td>
+            <td class="num">${fmt(p.total_requests)}</td>
+            <td class="num">${fmt(p.total_impressions)}</td>
+            <td class="num">${fmt(p.total_clicks)}</td>
+            <td class="num">${pct(p.fill_rate)}</td>
+            <td><span class="badge ${qClass}">${qLabel}</span></td></tr>`;
+    }
+
+    html += '</tbody></table></div>';
+    app.innerHTML = html;
+}
+
+function sortPl(col) {
+    if (plSort.col === col) plSort.asc = !plSort.asc;
+    else { plSort.col = col; plSort.asc = col === 'publisher_name' || col === 'placement_name'; }
+    renderPlacementsTable();
+}
+
+function plSortIcon(col) {
+    if (plSort.col !== col) return '';
+    return plSort.asc ? ' &#9650;' : ' &#9660;';
 }
 
 // ==================== COVERAGE TAB ====================
