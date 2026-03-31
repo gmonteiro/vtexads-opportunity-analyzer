@@ -7,7 +7,6 @@ from http.server import BaseHTTPRequestHandler
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from analyzer.config import Config
-from analyzer.clients.metabase import MetabaseClient
 from analyzer.reports import placement_gap, publisher_gap, opportunity_sizing
 from analyzer.formatter import format_placement_gap, format_publisher_gap, format_opportunity_sizing
 
@@ -18,19 +17,13 @@ REPORTS = {
 }
 
 
-def _run_report(advertiser: str, report_name: str, days: int, metabase_session: str) -> str:
+def _run_report(advertiser: str, report_name: str, days: int) -> str:
     config = Config.from_env()
-    if metabase_session:
-        config.metabase_session = metabase_session
 
     if not config.has_metabase():
-        return "ERRO: METABASE_SESSION nao configurado"
+        return "ERRO: Configure METABASE_USERNAME + METABASE_PASSWORD nas env vars do Vercel"
 
-    mb = MetabaseClient(
-        session_token=config.metabase_session,
-        base_url=config.metabase_base_url,
-        db_id=config.metabase_db_id,
-    )
+    mb = config.build_metabase_client()
 
     if report_name == "all":
         keys = list(REPORTS.keys())
@@ -61,7 +54,6 @@ class handler(BaseHTTPRequestHandler):
         advertiser = params.get("advertiser", "")
         report_name = params.get("report", "all")
         days = int(params.get("days", 30))
-        metabase_session = params.get("metabase_session", "")
 
         if not advertiser:
             self.send_response(400)
@@ -71,7 +63,7 @@ class handler(BaseHTTPRequestHandler):
             return
 
         try:
-            result = _run_report(advertiser, report_name, days, metabase_session)
+            result = _run_report(advertiser, report_name, days)
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.end_headers()
@@ -97,7 +89,6 @@ HTML_PAGE = """<!DOCTYPE html>
         .subtitle { color: #888; margin-bottom: 2rem; }
         .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
         .form-group { display: flex; flex-direction: column; gap: 0.4rem; }
-        .form-group.full { grid-column: 1 / -1; }
         label { font-size: 0.85rem; color: #a1a1aa; font-weight: 500; }
         input, select { padding: 0.6rem 0.8rem; border: 1px solid #27272a; border-radius: 8px; background: #18181b; color: #e1e1e6; font-size: 0.95rem; }
         input:focus, select:focus { outline: none; border-color: #7c3aed; }
@@ -107,9 +98,6 @@ HTML_PAGE = """<!DOCTYPE html>
         .result { margin-top: 2rem; padding: 1.5rem; border-radius: 12px; background: #18181b; border: 1px solid #27272a; white-space: pre-wrap; font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 0.85rem; line-height: 1.6; max-height: 70vh; overflow-y: auto; }
         .spinner { display: none; margin-top: 1rem; color: #7c3aed; }
         .spinner.active { display: block; }
-        table { border-collapse: collapse; width: 100%; margin: 0.5rem 0; }
-        th, td { border: 1px solid #333; padding: 4px 8px; text-align: left; font-size: 0.8rem; }
-        th { background: #27272a; }
     </style>
 </head>
 <body>
@@ -135,10 +123,6 @@ HTML_PAGE = """<!DOCTYPE html>
                 <label>Dias (lookback)</label>
                 <input type="number" id="days" value="30" min="1" max="90" />
             </div>
-            <div class="form-group">
-                <label>Metabase Session Token</label>
-                <input type="password" id="metabase_session" placeholder="Token de sessao" />
-            </div>
         </div>
 
         <button id="btn" onclick="runAnalysis()">Gerar Relatorio</button>
@@ -154,10 +138,8 @@ HTML_PAGE = """<!DOCTYPE html>
             const advertiser = document.getElementById('advertiser').value.trim();
             const report = document.getElementById('report').value;
             const days = document.getElementById('days').value;
-            const metabase_session = document.getElementById('metabase_session').value.trim();
 
             if (!advertiser) { alert('Preencha o advertiser'); return; }
-            if (!metabase_session) { alert('Preencha o Metabase Session Token'); return; }
 
             btn.disabled = true;
             spinner.classList.add('active');
@@ -167,7 +149,7 @@ HTML_PAGE = """<!DOCTYPE html>
                 const resp = await fetch('/api', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ advertiser, report, days: parseInt(days), metabase_session })
+                    body: JSON.stringify({ advertiser, report, days: parseInt(days) })
                 });
                 const data = await resp.json();
                 resultDiv.style.display = 'block';

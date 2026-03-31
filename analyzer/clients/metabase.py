@@ -5,14 +5,37 @@ import requests
 class MetabaseClient:
     SCHEMA = "vtex_ads_snowflake_silver_iceberg"
 
-    def __init__(self, session_token: str, base_url: str = "https://metabase.newtail.com.br", db_id: int = 20):
+    def __init__(
+        self,
+        base_url: str = "https://metabase.newtail.com.br",
+        db_id: int = 20,
+        session_token: str = "",
+        username: str = "",
+        password: str = "",
+    ):
         self.db_id = db_id
         self.base_url = base_url.rstrip("/")
         self.session = requests.Session()
-        self.session.headers.update({
-            "Content-Type": "application/json",
-            "X-Metabase-Session": session_token,
-        })
+        self.session.headers["Content-Type"] = "application/json"
+
+        if session_token:
+            self._set_token(session_token)
+        elif username and password:
+            self._login(username, password)
+
+    def _set_token(self, token: str):
+        self.session.headers["X-Metabase-Session"] = token
+
+    def _login(self, username: str, password: str):
+        resp = self.session.post(
+            f"{self.base_url}/api/session",
+            json={"username": username, "password": password},
+        )
+        resp.raise_for_status()
+        token = resp.json().get("id")
+        if not token:
+            raise RuntimeError("Metabase login failed: no session token returned")
+        self._set_token(token)
 
     @staticmethod
     def sanitize(value: str) -> str:

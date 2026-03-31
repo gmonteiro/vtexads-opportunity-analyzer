@@ -43,15 +43,10 @@ Exemplos:
     config = Config.from_env()
 
     if not config.has_metabase():
-        print("ERRO: METABASE_SESSION nao configurado no .env", file=sys.stderr)
-        print("Configure o token de sessao do Metabase para continuar.", file=sys.stderr)
+        print("ERRO: Configure METABASE_USERNAME + METABASE_PASSWORD (ou METABASE_SESSION) no .env", file=sys.stderr)
         sys.exit(1)
 
-    mb = MetabaseClient(
-        session_token=config.metabase_session,
-        base_url=config.metabase_base_url,
-        db_id=config.metabase_db_id,
-    )
+    mb = config.build_metabase_client()
 
     # Determine which reports to run
     if args.report == "all":
