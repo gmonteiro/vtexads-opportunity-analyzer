@@ -169,7 +169,7 @@ async function renderList() {
                 ? '<span class="badge active">Ativo</span>'
                 : '<span class="badge inactive">Inativo</span>';
             html += `
-                <tr data-id="${p.publisher_id}" data-name="${(p.name||'').toLowerCase()}" onclick="navigate('${p.publisher_id}')">
+                <tr data-id="${p.publisher_id}" data-name="${(p.name||'').toLowerCase()}">
                     <td class="name">${p.name || p.publisher_id}</td>
                     <td class="num">${fmt(p.placement_count)}</td>
                     <td class="num">${p.ad_type_count}</td>
@@ -180,6 +180,11 @@ async function renderList() {
 
         html += '</tbody></table></div>';
         app.innerHTML = html;
+
+        $('#tbody').addEventListener('click', function(e) {
+            const tr = e.target.closest('tr');
+            if (tr && tr.dataset.id) navigate(tr.dataset.id);
+        });
     } catch (e) {
         app.innerHTML = '<div class="error">' + e.message + '</div>';
     }
