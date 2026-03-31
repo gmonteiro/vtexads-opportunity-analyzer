@@ -108,6 +108,12 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
 const $ = s => document.querySelector(s);
 const app = $('#app');
 
+function esc(s) {
+    const d = document.createElement('div');
+    d.textContent = s || '';
+    return d.innerHTML;
+}
+
 function fmt(n) {
     if (n == null) return '0';
     return Number(n).toLocaleString('pt-BR');
@@ -169,8 +175,8 @@ async function renderList() {
                 ? '<span class="badge active">Ativo</span>'
                 : '<span class="badge inactive">Inativo</span>';
             html += `
-                <tr data-id="${p.publisher_id}" data-name="${(p.name||'').toLowerCase()}">
-                    <td class="name">${p.name || p.publisher_id}</td>
+                <tr data-id="${esc(p.publisher_id)}" data-name="${esc((p.name||'').toLowerCase())}">
+                    <td class="name">${esc(p.name || p.publisher_id)}</td>
                     <td class="num">${fmt(p.placement_count)}</td>
                     <td class="num">${p.ad_type_count}</td>
                     <td class="num">${fmt(p.total_requests_30d)}</td>
@@ -232,7 +238,7 @@ async function renderDetail(pubId) {
             <div class="detail-header">
                 <button class="back-btn" onclick="goBack()">← Voltar</button>
                 <div>
-                    <h2>${data.name}</h2>
+                    <h2>${esc(data.name)}</h2>
                     <div class="detail-meta">
                         <span>${totalPlacements} placements</span>
                         <span>${adTypes.length} ad types</span>
@@ -251,7 +257,7 @@ async function renderDetail(pubId) {
             html += `
             <div class="ad-type-section">
                 <div class="ad-type-header" onclick="toggleSection(this)">
-                    <h3>${adType}</h3>
+                    <h3>${esc(adType)}</h3>
                     <div>
                         <span class="count">${count} placements</span>
                         <span class="arrow"> ▼</span>
@@ -261,7 +267,7 @@ async function renderDetail(pubId) {
 
             for (const ctx of contexts) {
                 const placements = groups[adType][ctx];
-                html += `<div class="context-label">${ctx}</div>`;
+                html += `<div class="context-label">${esc(ctx)}</div>`;
                 html += `<table><thead><tr>
                     <th>Placement</th>
                     <th style="text-align:right">Requests</th>
@@ -272,7 +278,7 @@ async function renderDetail(pubId) {
 
                 for (const p of placements) {
                     html += `<tr>
-                        <td>${p.placement_name}</td>
+                        <td>${esc(p.placement_name)}</td>
                         <td class="num">${fmt(p.total_requests)}</td>
                         <td class="num">${fmt(p.total_impressions)}</td>
                         <td class="num">${fmt(p.total_clicks)}</td>
