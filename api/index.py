@@ -1,42 +1,4 @@
-import os
-import sys
-import json
 from http.server import BaseHTTPRequestHandler
-
-# Add project root to path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from analyzer.config import Config
-from analyzer.reports import placement_gap, publisher_gap, opportunity_sizing
-from analyzer.formatter import format_placement_gap, format_publisher_gap, format_opportunity_sizing
-
-REPORTS = {
-    "placement-gap": (placement_gap.generate, format_placement_gap),
-    "publisher-gap": (publisher_gap.generate, format_publisher_gap),
-    "opportunity-sizing": (opportunity_sizing.generate, format_opportunity_sizing),
-}
-
-
-def _run_report(advertiser: str, report_name: str, days: int) -> str:
-    config = Config.from_env()
-
-    if not config.has_metabase():
-        return "ERRO: Configure METABASE_USERNAME + METABASE_PASSWORD nas env vars do Vercel"
-
-    mb = config.build_metabase_client()
-
-    if report_name == "all":
-        keys = list(REPORTS.keys())
-    else:
-        keys = [report_name]
-
-    parts = []
-    for key in keys:
-        gen_fn, fmt_fn = REPORTS[key]
-        report = gen_fn(advertiser, mb, days=days)
-        parts.append(fmt_fn(report))
-
-    return "\n---\n\n".join(parts)
 
 
 class handler(BaseHTTPRequestHandler):
@@ -44,125 +6,294 @@ class handler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.end_headers()
-        self.wfile.write(HTML_PAGE.encode("utf-8"))
-
-    def do_POST(self):
-        content_length = int(self.headers.get("Content-Length", 0))
-        body = self.rfile.read(content_length)
-        params = json.loads(body)
-
-        advertiser = params.get("advertiser", "")
-        report_name = params.get("report", "all")
-        days = int(params.get("days", 30))
-
-        if not advertiser:
-            self.send_response(400)
-            self.send_header("Content-Type", "application/json")
-            self.end_headers()
-            self.wfile.write(json.dumps({"error": "advertiser obrigatorio"}).encode())
-            return
-
-        try:
-            result = _run_report(advertiser, report_name, days)
-            self.send_response(200)
-            self.send_header("Content-Type", "application/json")
-            self.end_headers()
-            self.wfile.write(json.dumps({"result": result}).encode())
-        except Exception as e:
-            self.send_response(500)
-            self.send_header("Content-Type", "application/json")
-            self.end_headers()
-            self.wfile.write(json.dumps({"error": str(e)}).encode())
+        self.wfile.write(HTML.encode("utf-8"))
 
 
-HTML_PAGE = """<!DOCTYPE html>
+HTML = """<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VTEX Ads Opportunity Analyzer</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f1117; color: #e1e1e6; min-height: 100vh; }
-        .container { max-width: 900px; margin: 0 auto; padding: 2rem; }
-        h1 { font-size: 1.8rem; margin-bottom: 0.5rem; background: linear-gradient(135deg, #7c3aed, #2563eb); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .subtitle { color: #888; margin-bottom: 2rem; }
-        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
-        .form-group { display: flex; flex-direction: column; gap: 0.4rem; }
-        label { font-size: 0.85rem; color: #a1a1aa; font-weight: 500; }
-        input, select { padding: 0.6rem 0.8rem; border: 1px solid #27272a; border-radius: 8px; background: #18181b; color: #e1e1e6; font-size: 0.95rem; }
-        input:focus, select:focus { outline: none; border-color: #7c3aed; }
-        button { padding: 0.7rem 1.5rem; border: none; border-radius: 8px; background: linear-gradient(135deg, #7c3aed, #2563eb); color: white; font-size: 1rem; font-weight: 600; cursor: pointer; margin-top: 0.5rem; }
-        button:hover { opacity: 0.9; }
-        button:disabled { opacity: 0.5; cursor: not-allowed; }
-        .result { margin-top: 2rem; padding: 1.5rem; border-radius: 12px; background: #18181b; border: 1px solid #27272a; white-space: pre-wrap; font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 0.85rem; line-height: 1.6; max-height: 70vh; overflow-y: auto; }
-        .spinner { display: none; margin-top: 1rem; color: #7c3aed; }
-        .spinner.active { display: block; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VTEX Ads Network Explorer</title>
+<style>
+:root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --surface2: #1a1a24;
+    --border: #2a2a3a;
+    --text: #e4e4ed;
+    --text2: #8888a0;
+    --accent: #7c3aed;
+    --accent2: #2563eb;
+    --green: #22c55e;
+    --yellow: #eab308;
+    --red: #ef4444;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+.container { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
+header { margin-bottom: 1.5rem; }
+h1 { font-size: 1.6rem; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.subtitle { color: var(--text2); font-size: 0.9rem; margin-top: 0.3rem; }
+
+/* Search */
+.search-bar { margin-bottom: 1rem; }
+.search-bar input {
+    width: 100%; padding: 0.7rem 1rem; border: 1px solid var(--border); border-radius: 8px;
+    background: var(--surface); color: var(--text); font-size: 0.95rem; outline: none;
+}
+.search-bar input:focus { border-color: var(--accent); }
+.search-bar input::placeholder { color: var(--text2); }
+
+/* Stats bar */
+.stats { display: flex; gap: 1.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.stat { font-size: 0.85rem; color: var(--text2); }
+.stat strong { color: var(--text); }
+
+/* Table */
+.table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+thead th { background: var(--surface2); color: var(--text2); font-weight: 600; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.5px; padding: 0.7rem 1rem; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
+tbody tr { cursor: pointer; transition: background 0.15s; border-bottom: 1px solid var(--border); }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: var(--surface2); }
+td { padding: 0.6rem 1rem; white-space: nowrap; }
+td.name { font-weight: 500; color: var(--text); max-width: 300px; overflow: hidden; text-overflow: ellipsis; }
+td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
+.badge.active { background: rgba(34,197,94,0.15); color: var(--green); }
+.badge.inactive { background: rgba(239,68,68,0.15); color: var(--red); }
+
+/* Detail view */
+.detail-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+.back-btn { background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem; }
+.back-btn:hover { background: var(--border); }
+.detail-header h2 { font-size: 1.3rem; }
+.detail-meta { display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.8rem; color: var(--text2); }
+.detail-meta span { background: var(--surface2); padding: 3px 10px; border-radius: 4px; }
+
+/* Ad type sections */
+.ad-type-section { margin-bottom: 1.5rem; }
+.ad-type-header { display: flex; align-items: center; justify-content: space-between; padding: 0.7rem 1rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px 8px 0 0; cursor: pointer; }
+.ad-type-header h3 { font-size: 0.95rem; font-weight: 600; }
+.ad-type-header .count { font-size: 0.8rem; color: var(--text2); }
+.ad-type-header .arrow { transition: transform 0.2s; color: var(--text2); }
+.ad-type-header.collapsed .arrow { transform: rotate(-90deg); }
+.ad-type-body { border: 1px solid var(--border); border-top: none; border-radius: 0 0 8px 8px; overflow: hidden; }
+.ad-type-body.hidden { display: none; }
+
+/* Context group */
+.context-label { padding: 0.4rem 1rem; background: rgba(124,58,237,0.08); color: var(--accent); font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+
+/* Loading / Error */
+.loading { text-align: center; padding: 3rem; color: var(--text2); }
+.error { text-align: center; padding: 2rem; color: var(--red); }
+
+@media (max-width: 768px) {
+    .container { padding: 1rem; }
+    td, th { padding: 0.5rem 0.6rem; font-size: 0.8rem; }
+}
+</style>
 </head>
 <body>
-    <div class="container">
-        <h1>VTEX Ads Opportunity Analyzer</h1>
-        <p class="subtitle">Placement gaps, publisher gaps e opportunity sizing</p>
+<div class="container">
+    <header>
+        <h1>VTEX Ads Network Explorer</h1>
+        <p class="subtitle">Publishers, formatos e placements disponiveis</p>
+    </header>
+    <div id="app"></div>
+</div>
 
-        <div class="form-grid">
-            <div class="form-group">
-                <label>Advertiser</label>
-                <input type="text" id="advertiser" placeholder="Ex: LOREALDCAVTEXADS" />
+<script>
+const $ = s => document.querySelector(s);
+const app = $('#app');
+
+function fmt(n) {
+    if (n == null) return '0';
+    return Number(n).toLocaleString('pt-BR');
+}
+
+function pct(n) {
+    if (n == null) return '0%';
+    return Number(n).toFixed(1) + '%';
+}
+
+// Router
+function route() {
+    const params = new URLSearchParams(location.search);
+    const pubId = params.get('publisher');
+    if (pubId) {
+        renderDetail(pubId);
+    } else {
+        renderList();
+    }
+}
+
+// Publishers list
+async function renderList() {
+    app.innerHTML = '<div class="loading">Carregando publishers...</div>';
+
+    try {
+        const resp = await fetch('/api/publishers');
+        if (!resp.ok) throw new Error('Erro ao carregar publishers');
+        const data = await resp.json();
+        if (data.error) throw new Error(data.error);
+
+        const withTraffic = data.filter(p => p.total_requests_30d > 0);
+        const totalPlacements = data.reduce((s, p) => s + p.placement_count, 0);
+
+        let html = `
+            <div class="search-bar">
+                <input type="text" id="search" placeholder="Buscar publisher..." oninput="filterTable()" />
             </div>
-            <div class="form-group">
-                <label>Relatorio</label>
-                <select id="report">
-                    <option value="all">Todos</option>
-                    <option value="placement-gap">Placement Gap</option>
-                    <option value="publisher-gap">Publisher Gap</option>
-                    <option value="opportunity-sizing">Opportunity Sizing</option>
-                </select>
+            <div class="stats">
+                <div class="stat"><strong>${data.length}</strong> publishers</div>
+                <div class="stat"><strong>${withTraffic.length}</strong> com trafego (30d)</div>
+                <div class="stat"><strong>${fmt(totalPlacements)}</strong> placements</div>
             </div>
-            <div class="form-group">
-                <label>Dias (lookback)</label>
-                <input type="number" id="days" value="30" min="1" max="90" />
-            </div>
-        </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Publisher</th>
+                            <th style="text-align:right">Placements</th>
+                            <th style="text-align:right">Ad Types</th>
+                            <th style="text-align:right">Requests (30d)</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody">`;
 
-        <button id="btn" onclick="runAnalysis()">Gerar Relatorio</button>
-        <p class="spinner" id="spinner">Gerando relatorio... (pode levar alguns minutos)</p>
-        <div class="result" id="result" style="display:none;"></div>
-    </div>
-
-    <script>
-        async function runAnalysis() {
-            const btn = document.getElementById('btn');
-            const spinner = document.getElementById('spinner');
-            const resultDiv = document.getElementById('result');
-            const advertiser = document.getElementById('advertiser').value.trim();
-            const report = document.getElementById('report').value;
-            const days = document.getElementById('days').value;
-
-            if (!advertiser) { alert('Preencha o advertiser'); return; }
-
-            btn.disabled = true;
-            spinner.classList.add('active');
-            resultDiv.style.display = 'none';
-
-            try {
-                const resp = await fetch('/api', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ advertiser, report, days: parseInt(days) })
-                });
-                const data = await resp.json();
-                resultDiv.style.display = 'block';
-                resultDiv.textContent = data.result || data.error || 'Erro desconhecido';
-            } catch (e) {
-                resultDiv.style.display = 'block';
-                resultDiv.textContent = 'Erro: ' + e.message;
-            } finally {
-                btn.disabled = false;
-                spinner.classList.remove('active');
-            }
+        for (const p of data) {
+            const badge = p.active
+                ? '<span class="badge active">Ativo</span>'
+                : '<span class="badge inactive">Inativo</span>';
+            html += `
+                <tr data-id="${p.publisher_id}" data-name="${(p.name||'').toLowerCase()}" onclick="navigate('${p.publisher_id}')">
+                    <td class="name">${p.name || p.publisher_id}</td>
+                    <td class="num">${fmt(p.placement_count)}</td>
+                    <td class="num">${p.ad_type_count}</td>
+                    <td class="num">${fmt(p.total_requests_30d)}</td>
+                    <td>${badge}</td>
+                </tr>`;
         }
-    </script>
+
+        html += '</tbody></table></div>';
+        app.innerHTML = html;
+    } catch (e) {
+        app.innerHTML = '<div class="error">' + e.message + '</div>';
+    }
+}
+
+function filterTable() {
+    const q = $('#search').value.toLowerCase();
+    document.querySelectorAll('#tbody tr').forEach(tr => {
+        tr.style.display = tr.dataset.name.includes(q) ? '' : 'none';
+    });
+}
+
+function navigate(pubId) {
+    history.pushState(null, '', '/?publisher=' + pubId);
+    renderDetail(pubId);
+}
+
+function goBack() {
+    history.pushState(null, '', '/');
+    renderList();
+}
+
+// Publisher detail
+async function renderDetail(pubId) {
+    app.innerHTML = '<div class="loading">Carregando placements...</div>';
+
+    try {
+        const resp = await fetch('/api/publisher-detail?id=' + encodeURIComponent(pubId));
+        if (!resp.ok) throw new Error('Erro ao carregar publisher');
+        const data = await resp.json();
+        if (data.error) throw new Error(data.error);
+
+        // Group by ad_type then context
+        const groups = {};
+        for (const p of data.placements) {
+            if (!groups[p.ad_type]) groups[p.ad_type] = {};
+            if (!groups[p.ad_type][p.context]) groups[p.ad_type][p.context] = [];
+            groups[p.ad_type][p.context].push(p);
+        }
+
+        const adTypes = Object.keys(groups).sort();
+        const totalPlacements = data.placements.length;
+
+        let html = `
+            <div class="detail-header">
+                <button class="back-btn" onclick="goBack()">← Voltar</button>
+                <div>
+                    <h2>${data.name}</h2>
+                    <div class="detail-meta">
+                        <span>${totalPlacements} placements</span>
+                        <span>${adTypes.length} ad types</span>
+                        <span>${data.active ? 'Ativo' : 'Inativo'}</span>
+                        ${data.allow_offsite ? '<span>Offsite habilitado</span>' : ''}
+                        ${data.min_cpc ? '<span>CPC min: ' + data.currency_code + ' ' + data.min_cpc.toFixed(2) + '</span>' : ''}
+                        ${data.min_cpm ? '<span>CPM min: ' + data.currency_code + ' ' + data.min_cpm.toFixed(2) + '</span>' : ''}
+                    </div>
+                </div>
+            </div>`;
+
+        for (const adType of adTypes) {
+            const contexts = Object.keys(groups[adType]).sort();
+            const count = Object.values(groups[adType]).reduce((s, arr) => s + arr.length, 0);
+
+            html += `
+            <div class="ad-type-section">
+                <div class="ad-type-header" onclick="toggleSection(this)">
+                    <h3>${adType}</h3>
+                    <div>
+                        <span class="count">${count} placements</span>
+                        <span class="arrow"> ▼</span>
+                    </div>
+                </div>
+                <div class="ad-type-body">`;
+
+            for (const ctx of contexts) {
+                const placements = groups[adType][ctx];
+                html += `<div class="context-label">${ctx}</div>`;
+                html += `<table><thead><tr>
+                    <th>Placement</th>
+                    <th style="text-align:right">Requests</th>
+                    <th style="text-align:right">Impressoes</th>
+                    <th style="text-align:right">Cliques</th>
+                    <th style="text-align:right">Fill Rate</th>
+                </tr></thead><tbody>`;
+
+                for (const p of placements) {
+                    html += `<tr>
+                        <td>${p.placement_name}</td>
+                        <td class="num">${fmt(p.total_requests)}</td>
+                        <td class="num">${fmt(p.total_impressions)}</td>
+                        <td class="num">${fmt(p.total_clicks)}</td>
+                        <td class="num">${pct(p.fill_rate)}</td>
+                    </tr>`;
+                }
+                html += '</tbody></table>';
+            }
+
+            html += '</div></div>';
+        }
+
+        app.innerHTML = html;
+    } catch (e) {
+        app.innerHTML = `<div class="detail-header"><button class="back-btn" onclick="goBack()">← Voltar</button></div><div class="error">${e.message}</div>`;
+    }
+}
+
+function toggleSection(el) {
+    el.classList.toggle('collapsed');
+    el.nextElementSibling.classList.toggle('hidden');
+}
+
+// Handle browser back/forward
+window.addEventListener('popstate', route);
+route();
+</script>
 </body>
-</html>
-"""
+</html>"""
