@@ -14,7 +14,7 @@ HTML = r"""<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VTEX Ads Network Explorer</title>
+<title>VTEX Ads — Opportunity Analyzer</title>
 <style>
 :root {
     --bg: #0a0a0f; --surface: #13131a; --surface2: #1a1a24; --border: #2a2a3a;
@@ -23,611 +23,308 @@ HTML = r"""<!DOCTYPE html>
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
-.container { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
-header { margin-bottom: 0.5rem; }
+.container { max-width: 1300px; margin: 0 auto; padding: 1.5rem; }
 h1 { font-size: 1.6rem; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-.subtitle { color: var(--text2); font-size: 0.9rem; margin-top: 0.3rem; }
+.subtitle { color: var(--text2); font-size: 0.85rem; margin-top: 0.25rem; }
 
-/* Tabs */
-.tabs { display: flex; gap: 0; margin: 1rem 0; border-bottom: 1px solid var(--border); }
-.tab { padding: 0.6rem 1.2rem; cursor: pointer; color: var(--text2); font-size: 0.9rem; font-weight: 500; border-bottom: 2px solid transparent; transition: all 0.15s; }
-.tab:hover { color: var(--text); }
-.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+/* Summary cards */
+.summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.8rem; margin: 1.2rem 0; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.2rem; }
+.card .label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text2); margin-bottom: 0.3rem; }
+.card .value { font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.card .value.accent { color: var(--accent); }
+.card .value.green { color: var(--green); }
+.card .value.blue { color: var(--blue); }
+.card .value.orange { color: var(--orange); }
 
-/* Search */
-.search-bar { margin-bottom: 1rem; }
-.search-bar input {
-    width: 100%; padding: 0.7rem 1rem; border: 1px solid var(--border); border-radius: 8px;
-    background: var(--surface); color: var(--text); font-size: 0.95rem; outline: none;
-}
-.search-bar input:focus { border-color: var(--accent); }
-.search-bar input::placeholder { color: var(--text2); }
-
-/* Stats */
-.stats { display: flex; gap: 1.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
-.stat { font-size: 0.85rem; color: var(--text2); }
-.stat strong { color: var(--text); }
-
-/* Table */
-.table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-thead th { background: var(--surface2); color: var(--text2); font-weight: 600; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.5px; padding: 0.7rem 1rem; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; cursor: pointer; }
-thead th:hover { color: var(--text); }
-tbody tr { transition: background 0.15s; border-bottom: 1px solid var(--border); }
-tbody tr:last-child { border-bottom: none; }
-tbody tr.clickable { cursor: pointer; }
-tbody tr.clickable:hover { background: var(--surface2); }
-td { padding: 0.6rem 1rem; white-space: nowrap; }
-td.name { font-weight: 500; color: var(--text); max-width: 300px; overflow: hidden; text-overflow: ellipsis; }
-td.num { text-align: right; font-variant-numeric: tabular-nums; }
-td.wrap { white-space: normal; max-width: 350px; }
-.badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
-.badge.active { background: rgba(34,197,94,0.15); color: var(--green); }
-.badge.inactive { background: rgba(239,68,68,0.15); color: var(--red); }
-.badge.paused { background: rgba(234,179,8,0.15); color: var(--yellow); }
-.badge.finished { background: rgba(136,136,160,0.15); color: var(--text2); }
-.badge.oob { background: rgba(249,115,22,0.15); color: var(--orange); }
-.badge.product { background: rgba(59,130,246,0.1); color: var(--blue); }
-.badge.banner { background: rgba(124,58,237,0.1); color: var(--accent); }
-.badge.sbrand { background: rgba(34,197,94,0.1); color: var(--green); }
-
-/* Detail view */
-.detail-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
-.back-btn { background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem; }
-.back-btn:hover { background: var(--border); }
-.detail-header h2 { font-size: 1.3rem; }
-.detail-meta { display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.8rem; color: var(--text2); }
-.detail-meta span { background: var(--surface2); padding: 3px 10px; border-radius: 4px; }
-
-/* Sections */
-.ad-type-section { margin-bottom: 1.5rem; }
-.ad-type-header { display: flex; align-items: center; justify-content: space-between; padding: 0.7rem 1rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px 8px 0 0; cursor: pointer; }
-.ad-type-header h3 { font-size: 0.95rem; font-weight: 600; }
-.ad-type-header .count { font-size: 0.8rem; color: var(--text2); }
-.ad-type-header .arrow { transition: transform 0.2s; color: var(--text2); }
-.ad-type-header.collapsed .arrow { transform: rotate(-90deg); }
-.ad-type-body { border: 1px solid var(--border); border-top: none; border-radius: 0 0 8px 8px; overflow: hidden; }
-.ad-type-body.hidden { display: none; }
-.context-label { padding: 0.4rem 1rem; background: rgba(124,58,237,0.08); color: var(--accent); font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
-
-/* Coverage bar */
-.cov-bar { display: flex; align-items: center; gap: 0.5rem; }
-.cov-bar-track { width: 80px; height: 8px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
-.cov-bar-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
-.cov-bar-fill.high { background: var(--green); }
-.cov-bar-fill.med { background: var(--yellow); }
-.cov-bar-fill.low { background: var(--red); }
-.cov-pct { font-size: 0.8rem; font-weight: 600; min-width: 40px; }
-.cov-pct.high { color: var(--green); }
-.cov-pct.med { color: var(--yellow); }
-.cov-pct.low { color: var(--red); }
-
-/* Filters row */
-.filters { display: flex; gap: 0.8rem; margin-bottom: 1rem; flex-wrap: wrap; align-items: center; }
-.filters select { padding: 0.5rem 0.8rem; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); font-size: 0.85rem; }
-.filters input { flex: 1; min-width: 200px; padding: 0.6rem 0.8rem; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); font-size: 0.9rem; outline: none; }
+/* Filters */
+.filters { display: flex; gap: 0.6rem; margin-bottom: 1rem; flex-wrap: wrap; align-items: center; }
+.filters input { flex: 1; min-width: 220px; padding: 0.65rem 0.9rem; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); font-size: 0.9rem; outline: none; }
 .filters input:focus { border-color: var(--accent); }
+.filters select { padding: 0.55rem 0.7rem; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); font-size: 0.82rem; cursor: pointer; }
 
-/* Quality badges */
-.badge.q-high { background: rgba(34,197,94,0.15); color: var(--green); }
-.badge.q-med { background: rgba(234,179,8,0.15); color: var(--yellow); }
-.badge.q-low { background: rgba(239,68,68,0.15); color: var(--red); }
+/* Accordion */
+.adv-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.adv-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.adv-header { display: flex; align-items: center; gap: 0.8rem; padding: 0.9rem 1.2rem; cursor: pointer; user-select: none; transition: background 0.1s; }
+.adv-header:hover { background: var(--surface2); }
+.adv-toggle { font-size: 0.7rem; color: var(--text2); transition: transform 0.2s; width: 1rem; text-align: center; }
+.adv-card.open .adv-toggle { transform: rotate(90deg); }
+.adv-name { font-weight: 600; font-size: 0.95rem; flex: 1; }
+.adv-stats { display: flex; gap: 1.2rem; font-size: 0.78rem; color: var(--text2); }
+.adv-stats strong { color: var(--text); }
+.adv-body { display: none; border-top: 1px solid var(--border); }
+.adv-card.open .adv-body { display: block; }
 
-/* Loading / Error */
-.loading { text-align: center; padding: 3rem; color: var(--text2); }
-.error { text-align: center; padding: 2rem; color: var(--red); }
+/* Gap sections inside accordion */
+.gap-section { border-bottom: 1px solid var(--border); }
+.gap-section:last-child { border-bottom: none; }
+.gap-header { display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 1.2rem; background: var(--surface2); cursor: pointer; user-select: none; }
+.gap-header:hover { background: rgba(124,58,237,0.05); }
+.gap-toggle { font-size: 0.6rem; color: var(--text2); width: 0.8rem; transition: transform 0.2s; }
+.gap-section.open .gap-toggle { transform: rotate(90deg); }
+.gap-title { font-size: 0.8rem; font-weight: 600; flex: 1; }
+.gap-count { font-size: 0.72rem; color: var(--text2); background: var(--surface); padding: 2px 8px; border-radius: 10px; }
+.gap-body { display: none; }
+.gap-section.open .gap-body { display: block; }
+
+/* Table inside gaps */
+.gap-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+.gap-table th { padding: 0.45rem 0.8rem; text-align: left; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text2); font-weight: 600; background: var(--surface); border-bottom: 1px solid var(--border); }
+.gap-table th.r { text-align: right; }
+.gap-table td { padding: 0.4rem 0.8rem; border-bottom: 1px solid rgba(42,42,58,0.5); white-space: nowrap; }
+.gap-table td.r { text-align: right; font-variant-numeric: tabular-nums; }
+.gap-table tr:last-child td { border-bottom: none; }
+.gap-table tr:hover { background: rgba(124,58,237,0.03); }
+
+/* Badges */
+.badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.68rem; font-weight: 600; }
+.badge.pub-gap { background: rgba(34,197,94,0.12); color: var(--green); }
+.badge.adtype-gap { background: rgba(59,130,246,0.12); color: var(--blue); }
+.badge.ctx-gap { background: rgba(234,179,8,0.12); color: var(--yellow); }
+.badge.size-gap { background: rgba(249,115,22,0.12); color: var(--orange); }
+.badge.plc-gap { background: rgba(124,58,237,0.12); color: var(--accent); }
+
+/* Similarity indicator */
+.sim { display: inline-flex; align-items: center; gap: 0.3rem; }
+.sim-bar { width: 40px; height: 5px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+.sim-fill { height: 100%; border-radius: 3px; background: var(--accent); }
+
+/* Loading */
+.loading { text-align: center; padding: 4rem 2rem; }
+.loading .spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 1rem; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading .msg { color: var(--text2); font-size: 0.9rem; }
+.loading .elapsed { color: var(--text2); font-size: 0.78rem; margin-top: 0.4rem; }
+.error { text-align: center; padding: 3rem; color: var(--red); }
+
+/* Load more */
+.load-more { text-align: center; padding: 1rem; }
+.load-more button { padding: 0.6rem 2rem; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); font-size: 0.85rem; cursor: pointer; transition: all 0.15s; }
+.load-more button:hover { border-color: var(--accent); color: var(--accent); }
 
 @media (max-width: 768px) {
     .container { padding: 1rem; }
-    td, th { padding: 0.5rem 0.6rem; font-size: 0.8rem; }
-    .tabs { overflow-x: auto; }
+    .summary { grid-template-columns: repeat(2, 1fr); }
+    .adv-stats { display: none; }
+    .gap-table td, .gap-table th { padding: 0.3rem 0.5rem; font-size: 0.72rem; }
 }
 </style>
 </head>
 <body>
 <div class="container">
     <header>
-        <h1>VTEX Ads Network Explorer</h1>
-        <p class="subtitle">Publishers, formatos, placements e campanhas</p>
+        <h1>Opportunity Analyzer</h1>
+        <p class="subtitle">Oportunidades de investimento na rede VTEX Ads</p>
     </header>
-    <div class="tabs" id="tabs">
-        <div class="tab" data-tab="publishers">Publishers</div>
-        <div class="tab active" data-tab="coverage">Cobertura</div>
-        <div class="tab" data-tab="campaigns">Campanhas</div>
-        <a href="/placements" class="tab" style="text-decoration:none">Placements &#8599;</a>
-    </div>
-    <div id="app"></div>
+    <div id="app"><div class="loading"><div class="spinner"></div><div class="msg">Analisando oportunidades da rede...</div><div class="elapsed" id="timer"></div></div></div>
 </div>
 
 <script>
-const $ = s => document.querySelector(s);
-const app = $('#app');
-let currentTab = 'publishers';
-
-function esc(s) {
-    const d = document.createElement('div');
-    d.textContent = s == null ? '' : String(s);
-    return d.innerHTML;
-}
+const app = document.getElementById('app');
+function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
 function fmt(n) { return n == null ? '0' : Number(n).toLocaleString('pt-BR'); }
-function pct(n) { return n == null ? '0%' : Number(n).toFixed(1) + '%'; }
-function fmtBRL(n) { return 'R$ ' + fmt(n); }
-
-// Tabs
-$('#tabs').addEventListener('click', e => {
-    const tab = e.target.closest('.tab');
-    if (!tab) return;
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-    currentTab = tab.dataset.tab;
-    if (currentTab === 'publishers') {
-        history.pushState(null, '', '/?tab=publishers');
-        route();
-    } else if (currentTab === 'coverage') {
-        history.pushState(null, '', '/');
-        renderCoverage();
-    } else if (currentTab === 'campaigns') {
-        history.pushState(null, '', '/?tab=campaigns');
-        renderCampaigns();
-    }
-});
-
-// Router
-function route() {
-    const params = new URLSearchParams(location.search);
-    const pubId = params.get('publisher');
-    const tab = params.get('tab');
-    const campId = params.get('campaign');
-    if (tab === 'campaigns' && campId) {
-        setActiveTab('campaigns');
-        renderCampaignDetail(campId);
-    } else if (tab === 'campaigns') {
-        setActiveTab('campaigns');
-        renderCampaigns();
-    } else if (tab === 'publishers' && pubId) {
-        setActiveTab('publishers');
-        renderDetail(pubId);
-    } else if (tab === 'publishers') {
-        setActiveTab('publishers');
-        renderList();
-    } else if (campId) {
-        setActiveTab('coverage');
-        renderCampaignDetail(campId);
-    } else {
-        setActiveTab('coverage');
-        renderCoverage();
-    }
+function cur(n) { return n == null ? 'R$ 0' : Number(n).toLocaleString('pt-BR', {style:'currency', currency:'BRL', minimumFractionDigits:0, maximumFractionDigits:0}); }
+function curD(n) { return n == null ? 'R$ 0' : Number(n).toLocaleString('pt-BR', {style:'currency', currency:'BRL', minimumFractionDigits:2}); }
+function compact(n) {
+    if (n == null) return 'R$ 0';
+    const v = Number(n);
+    if (v >= 1e6) return 'R$ ' + (v/1e6).toFixed(1).replace('.', ',') + 'M';
+    if (v >= 1e3) return 'R$ ' + (v/1e3).toFixed(1).replace('.', ',') + 'k';
+    return cur(v);
 }
 
-function setActiveTab(name) {
-    currentTab = name;
-    document.querySelectorAll('.tab').forEach(t => {
-        t.classList.toggle('active', t.dataset.tab === name);
-    });
-}
+const GAP_META = {
+    publisher_gap: { label: 'Publisher Gap', badge: 'pub-gap', icon: '&#9670;' },
+    ad_type_gap:   { label: 'Ad Type Gap',   badge: 'adtype-gap', icon: '&#9672;' },
+    context_gap:   { label: 'Context Gap',    badge: 'ctx-gap', icon: '&#9673;' },
+    ad_size_gap:   { label: 'Ad Size Gap',    badge: 'size-gap', icon: '&#9674;' },
+    placement_gap: { label: 'Placement Gap',  badge: 'plc-gap', icon: '&#9675;' },
+};
+const GAP_ORDER = ['publisher_gap', 'ad_type_gap', 'context_gap', 'ad_size_gap', 'placement_gap'];
 
-// ==================== PUBLISHERS TAB ====================
-async function renderList() {
-    app.innerHTML = '<div class="loading">Carregando publishers...</div>';
+let allData = [];
+let timerInterval;
+
+// Start timer
+const startTime = Date.now();
+timerInterval = setInterval(() => {
+    const el = document.getElementById('timer');
+    if (el) el.textContent = Math.floor((Date.now() - startTime) / 1000) + 's';
+}, 1000);
+
+async function init() {
     try {
-        const resp = await fetch('/api/publishers');
-        if (!resp.ok) throw new Error('Erro ao carregar publishers');
-        const data = await resp.json();
-        if (data.error) throw new Error(data.error);
-
-        const withTraffic = data.filter(p => p.total_requests_30d > 0);
-        const totalPlacements = data.reduce((s, p) => s + p.placement_count, 0);
-
-        let html = `
-            <div class="search-bar"><input type="text" id="search" placeholder="Buscar publisher..." oninput="filterRows('search','pub-tbody')" /></div>
-            <div class="stats">
-                <div class="stat"><strong>${data.length}</strong> publishers</div>
-                <div class="stat"><strong>${withTraffic.length}</strong> com trafego (30d)</div>
-                <div class="stat"><strong>${fmt(totalPlacements)}</strong> placements</div>
-            </div>
-            <div class="table-wrap"><table><thead><tr>
-                <th>Publisher</th>
-                <th style="text-align:right">Placements</th>
-                <th style="text-align:right">Ad Types</th>
-                <th style="text-align:right">Requests (30d)</th>
-                <th>Status</th>
-            </tr></thead><tbody id="pub-tbody">`;
-
-        for (const p of data) {
-            const badge = p.active ? '<span class="badge active">Ativo</span>' : '<span class="badge inactive">Inativo</span>';
-            html += `<tr class="clickable" data-id="${esc(p.publisher_id)}" data-name="${esc((p.name||'').toLowerCase())}">
-                <td class="name">${esc(p.name || p.publisher_id)}</td>
-                <td class="num">${fmt(p.placement_count)}</td>
-                <td class="num">${p.ad_type_count}</td>
-                <td class="num">${fmt(p.total_requests_30d)}</td>
-                <td>${badge}</td></tr>`;
-        }
-        html += '</tbody></table></div>';
-        app.innerHTML = html;
-
-        $('#pub-tbody').addEventListener('click', e => {
-            const tr = e.target.closest('tr');
-            if (tr && tr.dataset.id) navigate(tr.dataset.id);
-        });
-    } catch (e) { app.innerHTML = '<div class="error">' + esc(e.message) + '</div>'; }
-}
-
-function filterRows(inputId, tbodyId) {
-    const q = $('#' + inputId).value.toLowerCase();
-    document.querySelectorAll('#' + tbodyId + ' tr').forEach(tr => {
-        const name = tr.dataset.name || tr.textContent.toLowerCase();
-        tr.style.display = name.includes(q) ? '' : 'none';
-    });
-}
-
-function navigate(pubId) {
-    history.pushState(null, '', '/?tab=publishers&publisher=' + encodeURIComponent(pubId));
-    renderDetail(pubId);
-}
-
-function goBack() {
-    history.pushState(null, '', '/?tab=publishers');
-    renderList();
-}
-
-// Publisher detail
-async function renderDetail(pubId) {
-    app.innerHTML = '<div class="loading">Carregando placements...</div>';
-    try {
-        const resp = await fetch('/api/publisher-detail?id=' + encodeURIComponent(pubId));
-        if (!resp.ok) throw new Error('Erro ao carregar publisher');
-        const data = await resp.json();
-        if (data.error) throw new Error(data.error);
-
-        const groups = {};
-        for (const p of data.placements) {
-            if (!groups[p.ad_type]) groups[p.ad_type] = {};
-            if (!groups[p.ad_type][p.context]) groups[p.ad_type][p.context] = [];
-            groups[p.ad_type][p.context].push(p);
-        }
-        const adTypes = Object.keys(groups).sort();
-
-        let html = `<div class="detail-header"><button class="back-btn" onclick="goBack()">&#8592; Voltar</button><div>
-            <h2>${esc(data.name)}</h2>
-            <div class="detail-meta">
-                <span>${data.placements.length} placements</span><span>${adTypes.length} ad types</span>
-                <span>${data.active ? 'Ativo' : 'Inativo'}</span>
-                ${data.allow_offsite ? '<span>Offsite habilitado</span>' : ''}
-                ${data.min_cpc ? '<span>CPC min: ' + esc(data.currency_code) + ' ' + data.min_cpc.toFixed(2) + '</span>' : ''}
-                ${data.min_cpm ? '<span>CPM min: ' + esc(data.currency_code) + ' ' + data.min_cpm.toFixed(2) + '</span>' : ''}
-            </div></div></div>`;
-
-        for (const adType of adTypes) {
-            const contexts = Object.keys(groups[adType]).sort();
-            const count = Object.values(groups[adType]).reduce((s, a) => s + a.length, 0);
-            html += `<div class="ad-type-section"><div class="ad-type-header" onclick="toggleSection(this)">
-                <h3>${esc(adType)}</h3><div><span class="count">${count} placements</span><span class="arrow"> &#9660;</span></div>
-                </div><div class="ad-type-body">`;
-            for (const ctx of contexts) {
-                html += `<div class="context-label">${esc(ctx)}</div>`;
-                html += `<table><thead><tr><th>Placement</th><th style="text-align:right">Requests</th><th style="text-align:right">Impressoes</th><th style="text-align:right">Cliques</th><th style="text-align:right">Fill Rate</th></tr></thead><tbody>`;
-                for (const p of groups[adType][ctx]) {
-                    html += `<tr><td>${esc(p.placement_name)}</td><td class="num">${fmt(p.total_requests)}</td><td class="num">${fmt(p.total_impressions)}</td><td class="num">${fmt(p.total_clicks)}</td><td class="num">${pct(p.fill_rate)}</td></tr>`;
-                }
-                html += '</tbody></table>';
-            }
-            html += '</div></div>';
-        }
-        app.innerHTML = html;
+        const resp = await fetch('/api/opportunities?currency_code=BRL');
+        clearInterval(timerInterval);
+        if (!resp.ok) throw new Error('Erro ' + resp.status);
+        const json = await resp.json();
+        if (json.error) throw new Error(json.error);
+        allData = json.data || [];
+        render();
     } catch (e) {
-        app.innerHTML = `<div class="detail-header"><button class="back-btn" onclick="goBack()">&#8592; Voltar</button></div><div class="error">${esc(e.message)}</div>`;
+        clearInterval(timerInterval);
+        app.innerHTML = '<div class="error">' + esc(e.message) + '</div>';
     }
 }
 
-function toggleSection(el) {
-    el.classList.toggle('collapsed');
-    el.nextElementSibling.classList.toggle('hidden');
-}
+function render() {
+    let data = [...allData];
 
-// ==================== COVERAGE TAB ====================
-let coverageData = [];
-let coverageSort = { col: 'ad_count', asc: false };
-
-async function renderCoverage() {
-    app.innerHTML = '<div class="loading">Calculando cobertura de placements... (pode levar alguns segundos)</div>';
-    try {
-        const resp = await fetch('/api/coverage');
-        if (!resp.ok) throw new Error('Erro ao carregar cobertura');
-        const data = await resp.json();
-        if (data.error) throw new Error(data.error);
-        coverageData = data;
-        renderCoverageTable();
-    } catch (e) { app.innerHTML = '<div class="error">' + esc(e.message) + '</div>'; }
-}
-
-function renderCoverageTable() {
-    let data = [...coverageData];
-
-    // Filters
-    const q = ($('#cov-search') || {}).value || '';
-    const typeFilter = ($('#cov-type') || {}).value || 'all';
+    // Apply filters
+    const q = (document.getElementById('search') || {}).value || '';
+    const typeF = (document.getElementById('ftype') || {}).value || 'all';
+    const adTypeF = (document.getElementById('fadtype') || {}).value || 'all';
 
     if (q) {
         const ql = q.toLowerCase();
-        data = data.filter(c => c.advertiser.toLowerCase().includes(ql) || c.name.toLowerCase().includes(ql));
+        data = data.filter(d => (d.advertiser_name||'').toLowerCase().includes(ql) || (d.publisher_name||'').toLowerCase().includes(ql));
     }
-    if (typeFilter !== 'all') {
-        data = data.filter(c => c.ad_type === typeFilter);
+    if (typeF !== 'all') data = data.filter(d => d.opportunity_type === typeF);
+    if (adTypeF !== 'all') data = data.filter(d => d.ad_type === adTypeF);
+
+    // Group by advertiser
+    const advMap = new Map();
+    for (const d of data) {
+        const key = d.advertiser_id;
+        if (!advMap.has(key)) advMap.set(key, { id: key, name: d.advertiser_name, opps: [] });
+        advMap.get(key).opps.push(d);
     }
 
-    // Sort
-    data.sort((a, b) => {
-        let va = a[coverageSort.col], vb = b[coverageSort.col];
-        if (typeof va === 'string') { va = va.toLowerCase(); vb = (vb||'').toLowerCase(); }
-        if (va < vb) return coverageSort.asc ? -1 : 1;
-        if (va > vb) return coverageSort.asc ? 1 : -1;
-        return 0;
-    });
+    // Sort advertisers by total GMV 30d desc
+    const advs = [...advMap.values()].map(a => {
+        a.totalGmv30d = a.opps.reduce((s, o) => s + o.extra_gmv_30d, 0);
+        a.totalSpendDaily = a.opps.reduce((s, o) => s + o.extra_spend_daily, 0);
+        return a;
+    }).sort((a, b) => b.totalGmv30d - a.totalGmv30d);
 
-    const types = [...new Set(coverageData.map(c => c.ad_type))].sort();
-    const totalGaps = data.filter(c => c.coverage_pct < 80).length;
-    const avgCov = data.length ? Math.round(data.reduce((s, c) => s + c.coverage_pct, 0) / data.length) : 0;
+    // Totals
+    const totalOpps = data.length;
+    const totalAdvs = advs.length;
+    const totalSpend = data.reduce((s, d) => s + d.extra_spend_daily, 0);
+    const totalGmv = data.reduce((s, d) => s + d.extra_gmv_30d, 0);
+    const totalConv = data.reduce((s, d) => s + d.extra_conv_30d, 0);
+
+    // Unique filter values
+    const oppTypes = [...new Set(allData.map(d => d.opportunity_type))].filter(Boolean).sort();
+    const adTypes = [...new Set(allData.map(d => d.ad_type))].filter(Boolean).sort();
 
     let html = `
-        <div class="filters">
-            <input type="text" id="cov-search" placeholder="Buscar advertiser ou campanha..." value="${esc(q)}" oninput="renderCoverageTable()" />
-            <select id="cov-type" onchange="renderCoverageTable()">
-                <option value="all">Todos os tipos</option>
-                ${types.map(t => '<option value="' + esc(t) + '"' + (t === typeFilter ? ' selected' : '') + '>' + esc(t) + '</option>').join('')}
-            </select>
-        </div>
-        <div class="stats">
-            <div class="stat"><strong>${data.length}</strong> campanhas ativas</div>
-            <div class="stat"><strong>${avgCov}%</strong> cobertura media</div>
-            <div class="stat" style="color:var(--yellow)"><strong>${totalGaps}</strong> com oportunidade (&lt;80%)</div>
-        </div>
-        <div class="table-wrap"><table><thead><tr>
-            <th onclick="sortCoverage('advertiser')">Advertiser ${sortIcon('advertiser')}</th>
-            <th onclick="sortCoverage('name')">Campanha ${sortIcon('name')}</th>
-            <th onclick="sortCoverage('ad_type')">Tipo ${sortIcon('ad_type')}</th>
-            <th style="text-align:right" onclick="sortCoverage('ad_count')">Ads ${sortIcon('ad_count')}</th>
-            <th style="text-align:right" onclick="sortCoverage('used_placements')">Usados ${sortIcon('used_placements')}</th>
-            <th style="text-align:right" onclick="sortCoverage('available_placements')">Disponiveis ${sortIcon('available_placements')}</th>
-            <th onclick="sortCoverage('coverage_pct')">Cobertura ${sortIcon('coverage_pct')}</th>
-        </tr></thead><tbody>`;
+    <div class="filters">
+        <input type="text" id="search" placeholder="Buscar advertiser ou publisher..." value="${esc(q)}" oninput="render()" />
+        <select id="ftype" onchange="render()">
+            <option value="all">Todos os tipos</option>
+            ${oppTypes.map(t => '<option value="'+esc(t)+'"'+(t===typeF?' selected':'')+'>'+(GAP_META[t]?.label||t)+'</option>').join('')}
+        </select>
+        <select id="fadtype" onchange="render()">
+            <option value="all">Todos ad types</option>
+            ${adTypes.map(t => '<option value="'+esc(t)+'"'+(t===adTypeF?' selected':'')+'>'+ esc(t)+'</option>').join('')}
+        </select>
+    </div>
+    <div class="summary">
+        <div class="card"><div class="label">Advertisers</div><div class="value accent">${fmt(totalAdvs)}</div></div>
+        <div class="card"><div class="label">Oportunidades</div><div class="value blue">${fmt(totalOpps)}</div></div>
+        <div class="card"><div class="label">Extra Spend / dia</div><div class="value orange">${compact(totalSpend)}</div></div>
+        <div class="card"><div class="label">GMV Potencial 30d</div><div class="value green">${compact(totalGmv)}</div></div>
+        <div class="card"><div class="label">Conversoes 30d</div><div class="value">${fmt(totalConv)}</div></div>
+    </div>
+    <div class="adv-list">`;
 
-    for (const c of data) {
-        const level = c.coverage_pct >= 80 ? 'high' : c.coverage_pct >= 50 ? 'med' : 'low';
-        html += `<tr class="clickable" data-campid="${esc(c.campaign_id)}">
-            <td class="name">${esc(c.advertiser)}</td>
-            <td class="wrap">${esc(c.name)}</td>
-            <td><span class="badge ${adTypeBadge(c.ad_type)}">${esc(c.ad_type)}</span></td>
-            <td class="num">${c.ad_count}</td>
-            <td class="num">${c.used_placements}</td>
-            <td class="num">${c.available_placements}</td>
-            <td><div class="cov-bar">
-                <div class="cov-bar-track"><div class="cov-bar-fill ${level}" style="width:${Math.min(c.coverage_pct, 100)}%"></div></div>
-                <span class="cov-pct ${level}">${c.coverage_pct}%</span>
-            </div></td></tr>`;
-    }
-
-    html += '</tbody></table></div>';
-    app.innerHTML = html;
-
-    // Click delegation for campaign drill-down
-    app.querySelector('tbody').addEventListener('click', e => {
-        const tr = e.target.closest('tr.clickable');
-        if (tr && tr.dataset.campid) {
-            history.pushState(null, '', '/?campaign=' + encodeURIComponent(tr.dataset.campid));
-            renderCampaignDetail(tr.dataset.campid);
-        }
-    });
-}
-
-function sortCoverage(col) {
-    if (coverageSort.col === col) coverageSort.asc = !coverageSort.asc;
-    else { coverageSort.col = col; coverageSort.asc = col === 'advertiser' || col === 'name'; }
-    renderCoverageTable();
-}
-
-function sortIcon(col) {
-    if (coverageSort.col !== col) return '';
-    return coverageSort.asc ? ' &#9650;' : ' &#9660;';
-}
-
-// ==================== CAMPAIGNS TAB ====================
-async function renderCampaigns() {
-    app.innerHTML = '<div class="loading">Carregando campanhas da network...</div>';
-    try {
-        const resp = await fetch('/api/campaigns');
-        if (!resp.ok) throw new Error('Erro ao carregar campanhas');
-        const data = await resp.json();
-        if (data.error) throw new Error(data.error);
-
-        // Group by advertiser
-        const byAdv = {};
-        for (const c of data) {
-            if (!byAdv[c.advertiser]) byAdv[c.advertiser] = [];
-            byAdv[c.advertiser].push(c);
+    for (const adv of advs) {
+        // Group opps by gap type
+        const byGap = new Map();
+        for (const g of GAP_ORDER) byGap.set(g, []);
+        for (const o of adv.opps) {
+            const list = byGap.get(o.opportunity_type);
+            if (list) list.push(o); else { byGap.set(o.opportunity_type, [o]); }
         }
 
-        const advertisers = Object.keys(byAdv).sort();
-        const activeCount = data.filter(c => c.is_active).length;
-
-        let html = `
-            <div class="search-bar"><input type="text" id="camp-search" placeholder="Buscar advertiser ou campanha..." oninput="filterCampaigns()" /></div>
-            <div class="stats">
-                <div class="stat"><strong>${advertisers.length}</strong> advertisers</div>
-                <div class="stat"><strong>${data.length}</strong> campanhas</div>
-                <div class="stat"><strong>${activeCount}</strong> ativas</div>
-            </div>`;
-
-        for (const adv of advertisers) {
-            const camps = byAdv[adv];
-            const active = camps.filter(c => c.is_active).length;
-            const types = [...new Set(camps.map(c => c.ad_type))];
-
-            html += `<div class="ad-type-section advertiser-section" data-advname="${esc(adv.toLowerCase())}">
-                <div class="ad-type-header" onclick="toggleSection(this)">
-                    <h3>${esc(adv)}</h3>
-                    <div>
-                        <span class="count">${active} ativas / ${camps.length} total &nbsp; ${types.map(t => '<span class="badge ' + adTypeBadge(t) + '">' + esc(t) + '</span>').join(' ')}</span>
-                        <span class="arrow"> &#9660;</span>
-                    </div>
+        html += `
+        <div class="adv-card" onclick="toggleAdv(event, this)">
+            <div class="adv-header">
+                <span class="adv-toggle">&#9654;</span>
+                <span class="adv-name">${esc(adv.name)}</span>
+                <div class="adv-stats">
+                    <span><strong>${adv.opps.length}</strong> opps</span>
+                    <span><strong>${compact(adv.totalSpendDaily)}</strong>/dia</span>
+                    <span><strong>${compact(adv.totalGmv30d)}</strong> GMV 30d</span>
                 </div>
-                <div class="ad-type-body hidden">
-                    <table><thead><tr>
-                        <th>Campanha</th><th>Tipo</th><th style="text-align:right">Budget/dia</th><th>Status</th>
+            </div>
+            <div class="adv-body">`;
+
+        for (const [gapType, opps] of byGap) {
+            if (opps.length === 0) continue;
+            const meta = GAP_META[gapType] || { label: gapType, badge: '', icon: '' };
+            const gapGmv = opps.reduce((s, o) => s + o.extra_gmv_30d, 0);
+
+            // Columns vary by gap type
+            const showAdType = gapType !== 'publisher_gap';
+            const showTargeting = gapType === 'context_gap' || gapType === 'placement_gap';
+            const showSize = gapType === 'ad_size_gap' || gapType === 'placement_gap';
+
+            html += `
+            <div class="gap-section" onclick="toggleGap(event, this)">
+                <div class="gap-header">
+                    <span class="gap-toggle">&#9654;</span>
+                    <span class="badge ${meta.badge}">${meta.label}</span>
+                    <span class="gap-title">${compact(gapGmv)} GMV potencial</span>
+                    <span class="gap-count">${opps.length}</span>
+                </div>
+                <div class="gap-body">
+                    <table class="gap-table"><thead><tr>
+                        <th>Publisher</th>
+                        ${showAdType ? '<th>Ad Type</th>' : ''}
+                        ${showTargeting ? '<th>Targeting</th>' : ''}
+                        ${showSize ? '<th>Ad Size</th>' : ''}
+                        <th class="r">Spend/dia</th>
+                        <th class="r">Imps/dia</th>
+                        <th class="r">Conv 30d</th>
+                        <th class="r">GMV 30d</th>
+                        <th>Similaridade</th>
                     </tr></thead><tbody>`;
 
-            for (const c of camps) {
-                html += `<tr class="clickable" data-campid="${esc(c.campaign_id)}" data-name="${esc(c.campaign.toLowerCase())}">
-                    <td class="wrap">${esc(c.campaign)}</td>
-                    <td><span class="badge ${adTypeBadge(c.ad_type)}">${esc(c.ad_type)}</span></td>
-                    <td class="num">${c.daily_budget ? fmtBRL(c.daily_budget) : '-'}</td>
-                    <td>${statusBadge(c.status, c.is_active)}</td></tr>`;
+            // Sort by GMV desc within gap
+            opps.sort((a, b) => b.extra_gmv_30d - a.extra_gmv_30d);
+
+            for (const o of opps) {
+                const simPct = Math.min(100, (o.similarity_score / (opps[0]?.similarity_score || 1)) * 100);
+                html += `<tr>
+                    <td>${esc(o.publisher_name)}</td>
+                    ${showAdType ? '<td><span class="badge adtype-gap">'+esc(o.ad_type)+'</span></td>' : ''}
+                    ${showTargeting ? '<td>'+esc(o.targeting_type)+'</td>' : ''}
+                    ${showSize ? '<td>'+esc(o.ad_size || o.ad_size_name)+'</td>' : ''}
+                    <td class="r">${curD(o.extra_spend_daily)}</td>
+                    <td class="r">${fmt(o.extra_imps_daily)}</td>
+                    <td class="r">${fmt(o.extra_conv_30d)}</td>
+                    <td class="r" style="font-weight:600;color:var(--green)">${cur(o.extra_gmv_30d)}</td>
+                    <td><div class="sim"><div class="sim-bar"><div class="sim-fill" style="width:${simPct.toFixed(0)}%"></div></div><span style="font-size:0.7rem;color:var(--text2)">${o.neighbor_occurrences}</span></div></td>
+                </tr>`;
             }
+
             html += '</tbody></table></div></div>';
         }
 
-        app.innerHTML = html;
-
-        // Campaign click delegation
-        app.addEventListener('click', e => {
-            const tr = e.target.closest('tr.clickable[data-campid]');
-            if (tr) {
-                history.pushState(null, '', '/?tab=campaigns&campaign=' + encodeURIComponent(tr.dataset.campid));
-                renderCampaignDetail(tr.dataset.campid);
-            }
-        });
-    } catch (e) { app.innerHTML = '<div class="error">' + esc(e.message) + '</div>'; }
-}
-
-function filterCampaigns() {
-    const q = $('#camp-search').value.toLowerCase();
-    document.querySelectorAll('.advertiser-section').forEach(sec => {
-        const advMatch = sec.dataset.advname.includes(q);
-        const rows = sec.querySelectorAll('tbody tr');
-        let anyRow = false;
-        rows.forEach(tr => {
-            const match = advMatch || (tr.dataset.name && tr.dataset.name.includes(q));
-            tr.style.display = match ? '' : 'none';
-            if (match) anyRow = true;
-        });
-        sec.style.display = (advMatch || anyRow) ? '' : 'none';
-        // Auto-expand if searching
-        if (q && (advMatch || anyRow)) {
-            sec.querySelector('.ad-type-header').classList.remove('collapsed');
-            sec.querySelector('.ad-type-body').classList.remove('hidden');
-        }
-    });
-}
-
-// ==================== CAMPAIGN DETAIL ====================
-function goBackCampaigns() {
-    // Go back to coverage if that's where we came from
-    const prev = new URLSearchParams(location.search).get('tab');
-    if (prev === 'campaigns') {
-        history.pushState(null, '', '/?tab=campaigns');
-        renderCampaigns();
-    } else {
-        history.pushState(null, '', '/');
-        renderCoverage();
+        html += '</div></div>';
     }
+
+    html += '</div>';
+
+    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+    html += '<div style="text-align:center;padding:1.5rem;color:var(--text2);font-size:0.75rem">' + fmt(allData.length) + ' oportunidades carregadas em ' + elapsed + 's</div>';
+
+    app.innerHTML = html;
 }
 
-async function renderCampaignDetail(campId) {
-    app.innerHTML = '<div class="loading">Analisando placements da campanha... (pode levar alguns segundos)</div>';
-    try {
-        const resp = await fetch('/api/campaign-detail?id=' + encodeURIComponent(campId));
-        if (!resp.ok) throw new Error('Erro ao carregar campanha');
-        const data = await resp.json();
-        if (data.error) throw new Error(data.error);
-
-        const usedCount = data.used_placements.length;
-        const gapCount = data.gap_placements.length;
-
-        let html = `<div class="detail-header"><button class="back-btn" onclick="goBackCampaigns()">&#8592; Voltar</button><div>
-            <h2>${esc(data.name)}</h2>
-            <div class="detail-meta">
-                <span>${esc(data.advertiser)}</span>
-                <span class="badge ${adTypeBadge(data.ad_type)}">${esc(data.ad_type)}</span>
-                <span>${statusBadge(data.status, data.is_active)}</span>
-                ${data.daily_budget ? '<span>Budget: ' + fmtBRL(data.daily_budget) + '/dia</span>' : ''}
-            </div></div></div>`;
-
-        html += `<div class="stats">
-            <div class="stat"><strong>${usedCount}</strong> placements ativos</div>
-            <div class="stat" style="color:var(--yellow)"><strong>${gapCount}</strong> placements disponiveis nao utilizados</div>
-        </div>`;
-
-        // Used placements grouped by context
-        if (usedCount > 0) {
-            const usedByCtx = {};
-            for (const p of data.used_placements) {
-                if (!usedByCtx[p.context]) usedByCtx[p.context] = [];
-                usedByCtx[p.context].push(p);
-            }
-            html += `<div class="ad-type-section"><div class="ad-type-header" style="border-color:var(--green)" onclick="toggleSection(this)">
-                <h3 style="color:var(--green)">Placements Ativos</h3>
-                <div><span class="count">${usedCount} placements</span><span class="arrow"> &#9660;</span></div>
-            </div><div class="ad-type-body">`;
-            for (const ctx of Object.keys(usedByCtx).sort()) {
-                html += `<div class="context-label">${esc(ctx)}</div>`;
-                html += `<table><thead><tr><th>Placement</th><th style="text-align:right">Impressoes (30d)</th></tr></thead><tbody>`;
-                for (const p of usedByCtx[ctx]) {
-                    html += `<tr><td>${esc(p.placement_name)}</td><td class="num">${fmt(p.impressions)}</td></tr>`;
-                }
-                html += '</tbody></table>';
-            }
-            html += '</div></div>';
-        }
-
-        // Gap placements grouped by context
-        if (gapCount > 0) {
-            const gapByCtx = {};
-            for (const p of data.gap_placements) {
-                if (!gapByCtx[p.context]) gapByCtx[p.context] = [];
-                gapByCtx[p.context].push(p);
-            }
-            html += `<div class="ad-type-section"><div class="ad-type-header" style="border-color:var(--yellow)" onclick="toggleSection(this)">
-                <h3 style="color:var(--yellow)">Placements Disponiveis (Gap)</h3>
-                <div><span class="count">${gapCount} oportunidades</span><span class="arrow"> &#9660;</span></div>
-            </div><div class="ad-type-body">`;
-            for (const ctx of Object.keys(gapByCtx).sort()) {
-                html += `<div class="context-label">${esc(ctx)}</div>`;
-                html += `<table><thead><tr><th>Placement</th><th style="text-align:right">Requests na rede (30d)</th><th style="text-align:right">Impressoes na rede (30d)</th></tr></thead><tbody>`;
-                for (const p of gapByCtx[ctx]) {
-                    html += `<tr><td>${esc(p.placement_name)}</td><td class="num">${fmt(p.total_requests)}</td><td class="num">${fmt(p.total_impressions)}</td></tr>`;
-                }
-                html += '</tbody></table>';
-            }
-            html += '</div></div>';
-        }
-
-        app.innerHTML = html;
-    } catch (e) {
-        app.innerHTML = `<div class="detail-header"><button class="back-btn" onclick="goBackCampaigns()">&#8592; Voltar</button></div><div class="error">${esc(e.message)}</div>`;
-    }
+function toggleAdv(e, el) {
+    if (e.target.closest('.gap-section')) return;
+    el.classList.toggle('open');
+}
+function toggleGap(e, el) {
+    e.stopPropagation();
+    el.classList.toggle('open');
 }
 
-function statusBadge(status, isActive) {
-    if (isActive && (status === 'active' || status === 'running' || status === 'updating'))
-        return '<span class="badge active">Ativa</span>';
-    if (isActive && status === 'out_of_budget')
-        return '<span class="badge oob">Sem budget</span>';
-    if (status === 'paused')
-        return '<span class="badge paused">Pausada</span>';
-    if (status === 'finished')
-        return '<span class="badge finished">Finalizada</span>';
-    return '<span class="badge inactive">' + esc(status) + '</span>';
-}
-
-function adTypeBadge(t) {
-    if (t === 'product') return 'product';
-    if (t === 'banner' || t === 'banner_off_site' || t === 'banner_video') return 'banner';
-    if (t === 'sponsored_brand' || t === 'sponsored_brand_video') return 'sbrand';
-    return '';
-}
-
-// Handle browser back/forward
-window.addEventListener('popstate', route);
-route();
+init();
 </script>
 </body>
 </html>"""

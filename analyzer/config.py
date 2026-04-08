@@ -12,6 +12,7 @@ class Config:
     metabase_password: str
     metabase_base_url: str
     metabase_db_id: int
+    metabase_opp_db_id: int
 
     @classmethod
     def from_env(cls) -> "Config":
@@ -24,6 +25,7 @@ class Config:
             metabase_password=os.environ.get("METABASE_PASSWORD", ""),
             metabase_base_url=os.environ.get("METABASE_BASE_URL", "https://metabase.newtail.com.br"),
             metabase_db_id=int(os.environ.get("METABASE_DB_ID", "20")),
+            metabase_opp_db_id=int(os.environ.get("METABASE_OPP_DB_ID", "13")),
         )
 
     def has_metabase(self) -> bool:

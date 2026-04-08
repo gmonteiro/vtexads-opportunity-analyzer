@@ -7,9 +7,11 @@
     { "src": "api/campaign_detail.py", "use": "@vercel/python" },
     { "src": "api/coverage.py", "use": "@vercel/python" },
     { "src": "api/placements.py", "use": "@vercel/python" },
-    { "src": "api/placements_page.py", "use": "@vercel/python" }
+    { "src": "api/placements_page.py", "use": "@vercel/python" },
+    { "src": "api/opportunities.py", "use": "@vercel/python" }
   ],
   "routes": [
+    { "src": "/api/opportunities", "dest": "api/opportunities.py" },
     { "src": "/api/publishers", "dest": "api/publishers.py" },
     { "src": "/api/publisher-detail", "dest": "api/publisher_detail.py" },
     { "src": "/api/campaigns", "dest": "api/campaigns.py" },

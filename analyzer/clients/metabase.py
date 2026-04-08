@@ -42,14 +42,14 @@ class MetabaseClient:
         """Sanitize a value for safe SQL interpolation (identifiers/UUIDs only)."""
         return re.sub(r"[^a-zA-Z0-9_\-]", "", value)
 
-    def query(self, sql: str) -> list[dict]:
+    def query(self, sql: str, db_id: int | None = None) -> list[dict]:
         """Execute a native SQL query and return rows as list of dicts."""
         resp = self.session.post(
             f"{self.base_url}/api/dataset",
             json={
                 "type": "native",
                 "native": {"query": sql},
-                "database": self.db_id,
+                "database": db_id or self.db_id,
                 "parameters": [],
             },
         )
